@@ -21,7 +21,7 @@ use HTTP::Request;
 use MD5;
 use vars qw($VERSION);
 
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 
 sub _init {
@@ -31,8 +31,7 @@ sub _init {
   $self->{_cgi}  = CGI->new ();
 
   $self->{_domain}       = $params{Domain}
-                           || WWW::Auth::Config->doimain
-    || return $self->error ('No Domain specified.');
+                           || WWW::Auth::Config->doimain;
 
   $self->{_cgi_header}   = $params{CGIHeader} || 1;
   $self->{_login_param}  = $params{LoginParam}
@@ -259,21 +258,19 @@ sub make_ticket {
     my $hash    = MD5->hexhash ($pwd .
                     MD5->hexhash (join (':', $pwd, $ip_addr, $time, $expires,
                                              $uid)));
-    return $self->{_cgi}->cookie (-name        => $ticket_name,
-                                  -path        => '/',
-                                  -domain      => $domain,
-                                  -value       => {
-                                    'ip_addr'  => $ip_addr,
-                                    'time'     => $time,
-                                    'uid'      => $uid,
-                                    'hash'     => $hash,
-                                    'expires'  => $expires
-                                  });
+    my %cookie = (-name		=> $ticket_name,
+                  -value	=> {'ip_addr'	=> $ip_addr,
+                                   'time'	=> $time,
+                                   'uid'	=> $uid,
+                                   'hash'	=> $hash,
+                                   'expires'	=> $expires});
+    $cookie{-domain} = $domain if defined $domain;
+    return $self->{_cgi}->cookie (%cookie);
   } else {
-    return $self->{_cgi}->cookie (-name        => $ticket_name,
-                                  -path        => '/',
-                                  -domain      => $domain,
-                                  -value       => {uid => ''});
+    my %cookie = (-name		=> $ticket_name,
+                  -value	=> {uid => ''});
+    $cookie{-domain} = $domain if defined $domain;
+    return $self->{_cgi}->cookie (%cookie);
   }
 }
 
